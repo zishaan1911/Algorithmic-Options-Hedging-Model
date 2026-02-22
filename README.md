@@ -1,4 +1,4 @@
-#Options Hedging Engine
+## Options Hedging Engine
 
 **Status:** Private / Proprietary Codebase  
 **Focus:** Options Pricing, Volatility Surface Modeling, Monte Carlo Risk Management, and Low-Latency Execution.
