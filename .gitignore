@@ -1,0 +1,7 @@
+build/
+.cache/
+*.db
+*.db-wal
+*.db-shm
+/data/
+.vscode/

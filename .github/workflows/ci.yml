@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, cc: gcc, cxx: g++ }
+          - { os: ubuntu-latest, cc: clang, cxx: clang++ }
+          - { os: windows-latest }
+          - { os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install SQLite (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Configure
+        shell: bash
+        run: |
+          args=(-S . -B build -DCMAKE_BUILD_TYPE=Release)
+          if [ -n "${{ matrix.cxx }}" ]; then
+            args+=(-DCMAKE_C_COMPILER=${{ matrix.cc }} -DCMAKE_CXX_COMPILER=${{ matrix.cxx }})
+          fi
+          cmake "${args[@]}"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Smoke-test the CLI
+        shell: bash
+        run: |
+          bin=build/ohe; [ -f build/Release/ohe.exe ] && bin=build/Release/ohe.exe
+          "$bin" price --type put --spot 100 --strike 95 --tau 0.5 --heston 0.04,2,0.04,0.5,-0.7
+          "$bin" simulate --out sim.csv --days 400 --seed ci
+          "$bin" backtest --prices sim.csv --seed ci --ledger ci.db --run ci
+          "$bin" ledger --db ci.db --run ci
